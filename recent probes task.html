@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recent Probes Memory Task</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #d3d3d3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #container {
+            width: 90vw;
+            max-width: 1280px;
+            height: 90vh;
+            max-height: 800px;
+            background-color: #d3d3d3;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Fixation cross */
+        .fixation {
+            font-size: clamp(48px, 6vw, 64px);
+            color: black;
+            font-weight: normal;
+        }
+
+        /* Memory set display (2x3 grid) */
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 80px);
+            grid-template-rows: repeat(2, 80px);
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .memory-letter {
+            font-size: clamp(48px, 6vw, 64px);
+            color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: normal;
+        }
+
+        /* Probe letter */
+        .probe-letter {
+            font-size: clamp(48px, 6vw, 64px);
+            color: black;
+            font-weight: normal;
+        }
+
+        /* Error feedback */
+        .error-feedback {
+            font-size: 120px;
+            color: red;
+            position: absolute;
+            top: 60%;
+        }
+
+        /* Response labels */
+        .response-labels {
+            position: absolute;
+            bottom: 120px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            padding: 0 200px;
+        }
+
+        .response-label {
+            text-align: center;
+            color: #696969;
+            font-size: 24px;
+            line-height: 1.4;
+        }
+
+        /* Instructions */
+        .instructions {
+            max-width: 900px;
+            padding: 40px;
+            text-align: left;
+            color: black;
+        }
+
+        .instructions h1 {
+            font-size: clamp(28px, 4vw, 40px);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .instructions hr {
+            border: none;
+            border-top: 2px solid black;
+            margin: 20px 0;
+        }
+
+        .instructions p {
+            font-size: clamp(16px, 2vw, 20px);
+            line-height: 1.6;
+            margin: 15px 0;
+        }
+
+        .instructions .demo-box {
+            background-color: #e8e8e8;
+            border: 2px solid #a0a0a0;
+            padding: 20px;
+            margin: 20px 0;
+            display: inline-block;
+            position: relative;
+        }
+
+        .instructions .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 40px);
+            grid-template-rows: repeat(2, 40px);
+            gap: 10px;
+        }
+
+        .instructions .demo-letter {
+            font-size: 32px;
+            text-align: center;
+            font-weight: normal;
+        }
+
+        .instructions .demo-fixation {
+            font-size: 32px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .instructions .arrow {
+            font-size: 32px;
+            margin: 0 20px;
+            display: inline-block;
+        }
+
+        .instructions .probe-demo {
+            background-color: #e8e8e8;
+            border: 2px solid #a0a0a0;
+            padding: 10px 20px;
+            font-size: 32px;
+            display: inline-block;
+        }
+
+        .instructions .highlight {
+            font-weight: bold;
+        }
+
+        .instructions .red-exclaim {
+            color: red;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .instructions .continue {
+            font-size: 20px;
+            margin-top: 30px;
+            font-style: italic;
+            text-align: center;
+        }
+
+        /* Participant ID input */
+        .input-screen {
+            text-align: center;
+        }
+
+        .input-screen h1 {
+            font-size: 36px;
+            margin-bottom: 30px;
+            color: black;
+        }
+
+        .input-screen input {
+            font-size: 24px;
+            padding: 10px 20px;
+            width: 300px;
+            border: 2px solid #666;
+            border-radius: 5px;
+        }
+
+        .input-screen button {
+            font-size: 24px;
+            padding: 10px 40px;
+            margin-left: 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .input-screen button:hover {
+            background-color: #45a049;
+        }
+
+        /* Block intro screen */
+        .block-intro {
+            text-align: center;
+            font-size: 28px;
+            color: black;
+            max-width: 600px;
+        }
+
+        .block-intro h2 {
+            font-size: 36px;
+            margin-bottom: 30px;
+        }
+
+        .block-intro p {
+            margin: 20px 0;
+            line-height: 1.6;
+        }
+
+        /* Completion screen */
+        .completion {
+            text-align: center;
+            font-size: 24px;
+            color: black;
+            max-width: 700px;
+        }
+
+        .completion h1 {
+            font-size: 40px;
+            margin-bottom: 30px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <!-- Participant ID Screen -->
+        <div id="participant-screen" class="screen active input-screen">
+            <h1>Recent Probes Memory Task</h1>
+            <p style="color: black; margin: 20px 0;">Please enter your participant ID:</p>
+            <input type="text" id="participant-id" placeholder="Participant ID">
+            <button onclick="startExperiment()">Start</button>
+        </div>
+
+        <!-- Instruction Screens -->
+        <div id="intro-screen" class="screen">
+            <div class="instructions">
+                <h1>Memory Task</h1>
+                <hr>
+                <p>In this memory task, you will briefly see a set of 6 letters flashed onto the screen above and below a fixation cross before they get erased.</p>
+                
+                <div style="margin: 30px 0; display: flex; align-items: center; justify-content: center;">
+                    <div class="demo-box">
+                        <div style="display: grid; grid-template-columns: repeat(3, 40px); grid-gap: 5px;">
+                            <div class="demo-letter">J</div>
+                            <div class="demo-letter">T</div>
+                            <div class="demo-letter">G</div>
+                        </div>
+                        <div class="demo-fixation" style="text-align: center; margin: 5px 0;">+</div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 40px); grid-gap: 5px;">
+                            <div class="demo-letter">Z</div>
+                            <div class="demo-letter">W</div>
+                            <div class="demo-letter">K</div>
+                        </div>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="probe-demo">P</div>
+                </div>
+
+                <p>Shortly thereafter, a letter appears in the middle of the screen.</p>
+                <p class="highlight">Your task is to decide whether this letter was part of the initial 6 letter set.</p>
+                <p>If it was part of the 6 letter set, press the 'E' key.<br>
+                   If it was NOT part of the 6 letter set, press the 'I' key.</p>
+                <p>If you make a mistake a red <span class="red-exclaim">!</span> will appear below the letter.</p>
+                <p class="continue">Press SPACEBAR to practice the task.</p>
+            </div>
+        </div>
+
+        <div id="test-intro-screen" class="screen">
+            <div class="instructions">
+                <h1>Memory Task</h1>
+                <hr>
+                <p style="font-size: 26px; margin: 20px 0;">Are you ready for the test?</p>
+                <p class="highlight">Remember:<br>Your task is to decide whether the single letter was part of the initial 6 letter set.</p>
+                <p>If it was part of the 6 letter set, press the 'E' key.<br>
+                   If it was NOT part of the 6 letter set, press the 'I' key.</p>
+                <p>If you make a mistake a red <span class="red-exclaim">!</span> will appear below the letter.</p>
+                <p class="continue">Press SPACEBAR to start.</p>
+            </div>
+        </div>
+
+        <div id="block-screen" class="screen block-intro">
+            <h2 id="block-title">Block 1 of 2</h2>
+            <p id="block-message">Press SPACEBAR to begin.</p>
+        </div>
+
+        <!-- Trial Screens -->
+        <div id="fixation-screen" class="screen">
+            <div class="fixation">+</div>
+            <div class="response-labels">
+                <div class="response-label">MATCH<br>(E)</div>
+                <div class="response-label">NON-MATCH<br>(I)</div>
+            </div>
+        </div>
+
+        <div id="memory-screen" class="screen">
+            <div class="memory-grid" id="memory-grid">
+                <div class="memory-letter"></div>
+                <div class="memory-letter"></div>
+                <div class="memory-letter"></div>
+                <div class="memory-letter"></div>
+                <div class="memory-letter"></div>
+                <div class="memory-letter"></div>
+            </div>
+            <div class="response-labels">
+                <div class="response-label">MATCH<br>(E)</div>
+                <div class="response-label">NON-MATCH<br>(I)</div>
+            </div>
+        </div>
+
+        <div id="probe-screen" class="screen">
+            <div class="probe-letter" id="probe-letter">X</div>
+            <div class="error-feedback hidden" id="error-feedback">!</div>
+            <div class="response-labels">
+                <div class="response-label">MATCH<br>(E)</div>
+                <div class="response-label">NON-MATCH<br>(I)</div>
+            </div>
+        </div>
+
+        <!-- Completion Screen -->
+        <div id="completion-screen" class="screen completion">
+            <h1>Task Complete!</h1>
+            <p>Excellent work! You completed both blocks.</p>
+            <p>Thank you for your attention and effort.</p>
+            <p style="margin-top: 40px; font-size: 28px; font-weight: bold;">
+                A download dialog will appear - please click "Save" to save your data file.
+            </p>
+            <p style="margin-top: 30px; font-size: 24px;">
+                After saving the file, you may return to Qualtrics to continue the study.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================================
+        // CONSTANTS AND PARAMETERS
+        // ============================================================================
+        
+        const LETTERS = ['B', 'C', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 
+                         'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'X', 'Z'];
+
+        const PARAMS = {
+            fixationDuration: 1500,
+            memorySetDuration: 2000,
+            retentionInterval: 3000,
+            leftKey: 'e',
+            rightKey: 'i',
+            nPracticeTrials: 3
+        };
+
+        // Fixed trial sequences from Stahl et al. (2014)
+        const FIXED_BLOCKS = {
+            1: {
+                prefatory: {
+                    trial_types: ['match', 'nonmatch', 'nonmatch'],
+                    memory_sets: ['NBHSXR', 'PRCBLV', 'HJFKTX'],
+                    probes: ['B', 'Z', 'N'],
+                    probe_positions: [2, 0, 0]
+                },
+                test: {
+                    trial_types: ['match_recent', 'nonmatch_nonrecent', 'match_nonrecent', 'nonmatch_recent',
+                                'match_recent', 'match_nonrecent', 'nonmatch_recent', 'nonmatch_recent',
+                                'nonmatch_recent', 'match_recent', 'match_recent', 'match_recent',
+                                'nonmatch_nonrecent', 'match_recent', 'nonmatch_nonrecent', 'match_recent',
+                                'nonmatch_recent', 'nonmatch_nonrecent', 'nonmatch_nonrecent', 'nonmatch_nonrecent',
+                                'match_nonrecent', 'match_nonrecent', 'match_nonrecent', 'nonmatch_recent',
+                                'match_nonrecent', 'nonmatch_recent', 'nonmatch_nonrecent', 'match_nonrecent'],
+                    memory_sets: ['FTHMZR', 'ZGDWRF', 'NSFVGZ', 'CZFNXL', 'JBFXQZ', 'JGHKQX', 'LDWHJQ',
+                                'JHVZDP', 'PRFXVD', 'RTLVMP', 'GWLKMT', 'GLWHSN', 'QDSLZN', 'LXVQPZ',
+                                'JGCVLP', 'WNRPGJ', 'QJXWGH', 'JDGQFL', 'QRTLJK', 'HTRZVK', 'NZTGBV',
+                                'TVZWCX', 'CZRWJQ', 'ZKQMCH', 'LDMQBC', 'SQMJBN', 'SMPGJK', 'MCVPRK'],
+                    probes: ['T', 'Q', 'S', 'V', 'F', 'K', 'G', 'W', 'H', 'R', 'M', 'G', 'F', 'Z',
+                           'B', 'P', 'N', 'C', 'M', 'P', 'N', 'X', 'J', 'R', 'D', 'L', 'X', 'V'],
+                    probe_positions: [2, 0, 2, 0, 3, 4, 0, 0, 0, 1, 5, 1, 0, 6,
+                                    0, 4, 0, 0, 0, 0, 1, 6, 5, 0, 2, 0, 0, 3]
+                }
+            },
+            2: {
+                prefatory: {
+                    trial_types: ['match', 'match', 'nonmatch'],
+                    memory_sets: ['BDPHGW', 'QCJXZH', 'JBMFWD'],
+                    probes: ['G', 'C', 'Q'],
+                    probe_positions: [5, 2, 0]
+                },
+                test: {
+                    trial_types: ['nonmatch_recent', 'nonmatch_recent', 'match_nonrecent', 'match_nonrecent',
+                                'nonmatch_recent', 'nonmatch_recent', 'nonmatch_recent', 'match_nonrecent',
+                                'match_recent', 'nonmatch_nonrecent', 'nonmatch_nonrecent', 'nonmatch_nonrecent',
+                                'nonmatch_recent', 'match_nonrecent', 'nonmatch_recent', 'match_nonrecent',
+                                'match_recent', 'match_recent', 'nonmatch_nonrecent', 'match_recent',
+                                'nonmatch_nonrecent', 'match_recent', 'match_recent', 'match_nonrecent',
+                                'match_nonrecent', 'nonmatch_nonrecent', 'match_recent', 'nonmatch_nonrecent'],
+                    memory_sets: ['BMRNWC', 'KSXMRW', 'SXQWHV', 'QZPXVC', 'PVMRXG', 'NGVHXK', 'WXLVGF',
+                                'QLDSWX', 'MZXHQS', 'GXPHKZ', 'VPRNHZ', 'HSJVPD', 'QDGSXH', 'NQRXSB',
+                                'WSMRBV', 'FTLWVB', 'BLHWPK', 'BDKWNC', 'WRTFCD', 'FQSRPW', 'JFBSPZ',
+                                'TGJZVS', 'CWJTLG', 'XQLBWG', 'WPZVQL', 'VQPDSK', 'VNQXJD', 'JFCLXQ'],
+                    probes: ['F', 'B', 'H', 'C', 'Q', 'P', 'N', 'D', 'Q', 'C', 'W', 'L', 'J', 'N',
+                           'X', 'T', 'L', 'K', 'G', 'R', 'H', 'S', 'J', 'B', 'Z', 'M', 'V', 'Z'],
+                    probe_positions: [0, 0, 5, 6, 0, 0, 0, 3, 5, 0, 0, 0, 0, 1,
+                                    0, 2, 2, 3, 0, 4, 0, 6, 3, 4, 3, 0, 1, 0]
+                }
+            }
+        };
+
+        // ============================================================================
+        // STATE MANAGEMENT
+        // ============================================================================
+        
+        let state = {
+            participantId: '',
+            currentScreen: 'participant-screen',
+            experimentData: [],
+            currentBlockNum: 0,
+            currentTrialNum: 0,
+            currentTrials: [],
+            currentTrial: null,
+            trialStartTime: null,
+            blockType: 'practice'
+        };
+
+        // ============================================================================
+        // SCREEN MANAGEMENT
+        // ============================================================================
+        
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            state.currentScreen = screenId;
+        }
+
+        // ============================================================================
+        // TRIAL GENERATION
+        // ============================================================================
+        
+        function shuffle(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function sample(array, n) {
+            const shuffled = shuffle(array);
+            return shuffled.slice(0, n);
+        }
+
+        function createPracticeTrials() {
+            const trials = [];
+            
+            // Create 2 match trials
+            for (let i = 0; i < 2; i++) {
+                const memorySetLetters = sample(LETTERS, 6);
+                const probe = memorySetLetters[Math.floor(Math.random() * memorySetLetters.length)];
+                const probePos = memorySetLetters.indexOf(probe) + 1;
+                
+                trials.push({
+                    trial_type: 'match',
+                    memory_set: memorySetLetters.join(''),
+                    probe: probe,
+                    probe_position: probePos,
+                    correct_key: PARAMS.leftKey,
+                    correct_response: 'match'
+                });
+            }
+            
+            // Create 1 nonmatch trial
+            const memorySetLetters2 = sample(LETTERS, 6);
+            const available = LETTERS.filter(l => !memorySetLetters2.includes(l));
+            const probe2 = available[Math.floor(Math.random() * available.length)];
+            
+            trials.push({
+                trial_type: 'nonmatch',
+                memory_set: memorySetLetters2.join(''),
+                probe: probe2,
+                probe_position: 0,
+                correct_key: PARAMS.rightKey,
+                correct_response: 'nonmatch'
+            });
+            
+            return shuffle(trials);
+        }
+
+        function createFixedBlockTrials(blockNum) {
+            const blockData = FIXED_BLOCKS[blockNum];
+            const trials = [];
+            
+            // Prefatory trials
+            const prefatory = blockData.prefatory;
+            for (let i = 0; i < prefatory.trial_types.length; i++) {
+                const trialType = prefatory.trial_types[i];
+                const isMatch = trialType.startsWith('match');
+                trials.push({
+                    trial_type: trialType,
+                    memory_set: prefatory.memory_sets[i],
+                    probe: prefatory.probes[i],
+                    probe_position: prefatory.probe_positions[i],
+                    correct_key: isMatch ? PARAMS.leftKey : PARAMS.rightKey,
+                    correct_response: isMatch ? 'match' : 'nonmatch'
+                });
+            }
+            
+            // Test trials
+            const test = blockData.test;
+            for (let i = 0; i < test.trial_types.length; i++) {
+                const trialType = test.trial_types[i];
+                const isMatch = trialType.startsWith('match');
+                trials.push({
+                    trial_type: trialType,
+                    memory_set: test.memory_sets[i],
+                    probe: test.probes[i],
+                    probe_position: test.probe_positions[i],
+                    correct_key: isMatch ? PARAMS.leftKey : PARAMS.rightKey,
+                    correct_response: isMatch ? 'match' : 'nonmatch'
+                });
+            }
+            
+            return trials;
+        }
+
+        // ============================================================================
+        // TRIAL EXECUTION
+        // ============================================================================
+        
+        async function runTrial(trial) {
+            state.currentTrial = trial;
+            
+            // 1. Fixation (1500ms)
+            showScreen('fixation-screen');
+            await sleep(PARAMS.fixationDuration);
+            
+            // 2. Memory set (2000ms)
+            const memoryLetters = document.querySelectorAll('.memory-letter');
+            for (let i = 0; i < 6; i++) {
+                memoryLetters[i].textContent = trial.memory_set[i];
+            }
+            showScreen('memory-screen');
+            await sleep(PARAMS.memorySetDuration);
+            
+            // 3. Retention interval (3000ms)
+            showScreen('fixation-screen');
+            await sleep(PARAMS.retentionInterval);
+            
+            // 4. Probe and collect response
+            document.getElementById('probe-letter').textContent = trial.probe;
+            document.getElementById('error-feedback').classList.add('hidden');
+            showScreen('probe-screen');
+            
+            state.trialStartTime = Date.now();
+            const response = await waitForResponse();
+            
+            // Process response
+            const rt = response ? (Date.now() - state.trialStartTime) / 1000 : null;
+            const responseKey = response;
+            const responseCategory = response === PARAMS.leftKey ? 'match' : 
+                                    response === PARAMS.rightKey ? 'nonmatch' : null;
+            const correct = response === trial.correct_key;
+            
+            // Show error feedback during practice
+            if (state.blockType === 'practice' && !correct) {
+                if (response === null) {
+                    // Too slow
+                    showScreen('fixation-screen');
+                    await sleep(200);
+                    alert('Too slow! Please respond faster.');
+                } else {
+                    // Wrong answer
+                    document.getElementById('error-feedback').classList.remove('hidden');
+                    await sleep(500);
+                }
+            }
+            
+            // Save trial data
+            const trialData = {
+                participant_id: state.participantId,
+                block_num: state.currentBlockNum,
+                block_type: state.blockType,
+                trial_num: state.currentTrialNum,
+                trial_type: trial.trial_type,
+                memory_set: trial.memory_set,
+                probe: trial.probe,
+                probe_position: trial.probe_position,
+                correct_response: trial.correct_response,
+                response: responseKey,
+                response_category: responseCategory,
+                correct: correct,
+                rt: rt,
+                timestamp: new Date().toISOString()
+            };
+            
+            state.experimentData.push(trialData);
+            
+            return trialData;
+        }
+
+        function waitForResponse() {
+            return new Promise((resolve) => {
+                let responded = false;
+                const timeout = setTimeout(() => {
+                    if (!responded) {
+                        document.removeEventListener('keydown', handler);
+                        resolve(null);
+                    }
+                }, 5000);
+                
+                function handler(e) {
+                    if (responded) return;
+                    
+                    const key = e.key.toLowerCase();
+                    if (key === PARAMS.leftKey || key === PARAMS.rightKey) {
+                        responded = true;
+                        clearTimeout(timeout);
+                        document.removeEventListener('keydown', handler);
+                        resolve(key);
+                    }
+                }
+                
+                document.addEventListener('keydown', handler);
+            });
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // ============================================================================
+        // EXPERIMENT FLOW
+        // ============================================================================
+        
+        function startExperiment() {
+            const id = document.getElementById('participant-id').value.trim();
+            if (!id) {
+                alert('Please enter a participant ID');
+                return;
+            }
+            
+            state.participantId = id;
+            showScreen('intro-screen');
+            
+            // Wait for spacebar
+            waitForSpacebar().then(() => {
+                runPracticeBlock();
+            });
+        }
+
+        async function runPracticeBlock() {
+            state.blockType = 'practice';
+            state.currentBlockNum = 0;
+            state.currentTrials = createPracticeTrials();
+            
+            for (let i = 0; i < state.currentTrials.length; i++) {
+                state.currentTrialNum = i + 1;
+                await runTrial(state.currentTrials[i]);
+            }
+            
+            // Show test intro
+            showScreen('test-intro-screen');
+            await waitForSpacebar();
+            
+            runTestBlocks();
+        }
+
+        async function runTestBlocks() {
+            state.blockType = 'test';
+            
+            for (let blockNum = 1; blockNum <= 2; blockNum++) {
+                state.currentBlockNum = blockNum;
+                
+                // Show block intro
+                document.getElementById('block-title').textContent = `Block ${blockNum} of 2`;
+                if (blockNum === 1) {
+                    document.getElementById('block-message').textContent = 'Press SPACEBAR to begin.';
+                } else {
+                    document.getElementById('block-message').innerHTML = 
+                        'Take a short break if needed.<br>Stretch, breathe, relax.<br><br>Press SPACEBAR when ready to continue.';
+                }
+                showScreen('block-screen');
+                await waitForSpacebar();
+                
+                // Run trials
+                state.currentTrials = createFixedBlockTrials(blockNum);
+                for (let i = 0; i < state.currentTrials.length; i++) {
+                    state.currentTrialNum = i + 1;
+                    await runTrial(state.currentTrials[i]);
+                }
+            }
+            
+            showCompletionScreen();
+        }
+
+        function waitForSpacebar() {
+            return new Promise((resolve) => {
+                function handler(e) {
+                    if (e.code === 'Space') {
+                        document.removeEventListener('keydown', handler);
+                        resolve();
+                    }
+                }
+                document.addEventListener('keydown', handler);
+            });
+        }
+
+        function showCompletionScreen() {
+            showScreen('completion-screen');
+            
+            // Automatically download data immediately
+            downloadData();
+        }
+
+        function downloadData() {
+            // Convert data to CSV
+            const headers = Object.keys(state.experimentData[0]);
+            const csv = [
+                headers.join(','),
+                ...state.experimentData.map(row => 
+                    headers.map(header => {
+                        const value = row[header];
+                        return typeof value === 'string' && value.includes(',') 
+                            ? `"${value}"` 
+                            : value;
+                    }).join(',')
+                )
+            ].join('\n');
+            
+            const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
+            const filename = `${state.participantId}_RecentProbesTask_SHORT_${timestamp}.csv`;
+            
+            // Force download using multiple compatible methods
+            try {
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                
+                // Try msSaveBlob for IE/Edge
+                if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+                    window.navigator.msSaveOrOpenBlob(blob, filename);
+                    return;
+                }
+                
+                // Create temporary link element
+                const link = document.createElement('a');
+                const url = window.URL.createObjectURL(blob);
+                
+                link.href = url;
+                link.download = filename;
+                link.style.display = 'none';
+                
+                // Append to body, click, and remove
+                document.body.appendChild(link);
+                
+                // Use setTimeout to ensure the link is in DOM
+                setTimeout(() => {
+                    link.dispatchEvent(new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                    }));
+                    
+                    // Clean up
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                    }, 100);
+                }, 0);
+                
+            } catch (e) {
+                console.error('Download error:', e);
+                // Fallback: show data in console
+                console.log('CSV Data:', csv);
+            }
+        }
+
+        // ============================================================================
+        // INITIALIZE
+        // ============================================================================
+        
+        // Prevent default spacebar scrolling
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && e.target === document.body) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
